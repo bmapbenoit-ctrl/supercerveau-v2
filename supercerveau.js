@@ -953,6 +953,59 @@ app.listen(PORT, async () => {
 ║  Port: ${PORT}                                                  ║
 ║  Mode: ${process.env.MODE || 'manual'}                                            ║
 ║                                                              ║
+// ============================================================================
+// WORKFLOW AUTONOME SÉCURISÉ
+// ============================================================================
+
+const workflow = require('./workflow-secure.js');
+
+// GET /workflow/status - État du workflow
+app.get('/workflow/status', (req, res) => {
+  res.json(workflow.getWorkflowStatus());
+});
+
+// POST /workflow/start - Démarrer le workflow
+app.post('/workflow/start', async (req, res) => {
+  console.log('🚀 Démarrage workflow demandé');
+  const result = await workflow.startWorkflow();
+  res.json(result);
+});
+
+// POST /workflow/validate - Valider et continuer
+app.post('/workflow/validate', async (req, res) => {
+  console.log('✅ Validation reçue');
+  const result = await workflow.validateAndContinue();
+  res.json(result);
+});
+
+// POST /workflow/reset - Réinitialiser le workflow
+app.post('/workflow/reset', (req, res) => {
+  console.log('🔄 Reset workflow');
+  res.json(workflow.resetWorkflow());
+});
+
+// GET /workflow/tasks - Liste des tâches
+app.get('/workflow/tasks', (req, res) => {
+  res.json({
+    total: workflow.TASKS.length,
+    tasks: workflow.TASKS.map(t => ({
+      id: t.id,
+      title: t.title,
+      type: t.type,
+      requires_validation: t.requires_validation
+    }))
+  });
+});
+
+// GET /workflow/budget - État du budget
+app.get('/workflow/budget', (req, res) => {
+  res.json({
+    max_usd: workflow.SECURITY.budget_max_usd,
+    current_usd: workflow.SECURITY.budget_current_usd,
+    remaining_usd: workflow.SECURITY.budget_max_usd - workflow.SECURITY.budget_current_usd,
+    percent_used: ((workflow.SECURITY.budget_current_usd / workflow.SECURITY.budget_max_usd) * 100).toFixed(1) + '%'
+  });
+});
 ║  Architecture Sidekick:                                      ║
 ║  ├── Chef d'orchestre ✅                                     ║
 ║  ├── Message Bus Redis ✅                                    ║
