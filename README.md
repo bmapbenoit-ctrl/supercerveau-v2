@@ -1,54 +1,66 @@
-# 🧠 Supercerveau V2 - Planetebeauty
+# 🧠 Supercerveau Unifié V3.0 - Planetebeauty
 
-Agent IA autonome **sécurisé** pour Planetebeauty.com
+Système nerveux central unifié pour Planetebeauty.com, intégrant l'architecture Sidekick complète.
 
-## 🔒 Sécurités
+## Architecture
 
-| Protection | Limite |
-|------------|--------|
-| Budget quotidien | $10/jour |
-| Coût max par tâche | $2 |
-| Tokens quotidiens | 500 000 |
-| Tâches par heure | 10 max |
-| Circuit breaker | 3 erreurs |
-| Sous-tâches | **INTERDIT** |
+```
+SUPERCERVEAU UNIFIÉ V3.0
+├── Chef d'orchestre (validation + routing)
+├── Message Bus Redis (Pub/Sub temps réel)
+├── Agent Stratège (analyse KPIs, rapports)
+├── Agent Opérateur (commandes, SAV, notifications)
+├── Agent Technicien (code, debug, deploy)
+├── Shopify Connector (GraphQL + Cache Redis)
+└── Sécurité (budget $10/jour, validation obligatoire)
+```
 
-## ⚡ Fonctionnement
+## Démarrage
 
-1. Le Supercerveau lit les tâches **approuvées** dans Supabase
-2. Il les exécute une par une
-3. Il peut **suggérer** des tâches (en `pending_validation`)
-4. Benoît valide dans le Dashboard → https://copilote.planetebeauty.com
-5. Si trop d'erreurs → Circuit breaker → Email d'alerte
+```bash
+# Installation
+npm install
 
-## 🚀 Déploiement Railway
+# Configuration
+cp .env.example .env
+# Éditer .env avec vos credentials
 
-Variables requises :
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_KEY`
-- `ANTHROPIC_API_KEY`
-- `GMAIL_USER`
-- `GMAIL_APP_PASSWORD`
-- `PORT` (3001)
-- `MODE` (manual ou auto)
+# Lancement
+npm start
+```
 
-## 📡 API
+## Endpoints API
 
 | Endpoint | Méthode | Description |
 |----------|---------|-------------|
-| `/health` | GET | Status agent |
-| `/start` | POST | Démarrer l'agent |
-| `/stop` | POST | Arrêter l'agent |
-| `/budget` | GET | Budget restant |
-| `/suggest` | POST | Suggérer une tâche |
+| /health | GET | Status système |
+| /start | POST | Démarrer orchestrateur |
+| /stop | POST | Arrêter orchestrateur |
+| /budget | GET | Budget restant |
+| /agents | GET | Status des agents |
+| /suggest | POST | Suggérer une tâche |
+| /kpis | GET | KPIs Shopify |
+| /events/:channel | GET | Historique Message Bus |
+| /webhooks/shopify | POST | Webhooks Shopify |
 
-## 🛑 Mode Manuel (par défaut)
+## Sécurité
 
-Par sécurité, l'agent démarre en mode **MANUEL**.
+- Budget quotidien: $10/jour
+- Limite tokens: 500,000/jour  
+- Tâches par heure: max 10
+- Circuit breaker: 3 erreurs consécutives
+- Validation obligatoire avant exécution
 
-Pour démarrer :
-```bash
-curl -X POST https://supercerveau-v2.up.railway.app/start
-```
+## Déploiement Railway
 
-Pour activer le mode auto, ajouter `MODE=auto` dans les variables Railway.
+Variables d'environnement requises:
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_KEY`
+- `UPSTASH_REDIS_URL`
+- `UPSTASH_REDIS_TOKEN`
+- `SHOPIFY_ACCESS_TOKEN`
+- `ANTHROPIC_API_KEY`
+- `MODE` (manual|auto)
+
+---
+*Généré le 27 décembre 2025*
