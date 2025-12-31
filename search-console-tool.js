@@ -1,10 +1,25 @@
-// search-console-tool.js - Outil Search Console pour STELLA v3.0 (ES Module)
+// search-console-tool.js - Outil Search Console pour STELLA v3.1 (ES Module)
 
 import { google } from 'googleapis';
 
 class SearchConsoleTool {
   constructor() {
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT || '{}');
+    let credentials = {};
+    
+    // Support base64 ou JSON direct
+    const rawCreds = process.env.GOOGLE_SERVICE_ACCOUNT || '';
+    if (rawCreds) {
+      try {
+        if (rawCreds.startsWith('{')) {
+          credentials = JSON.parse(rawCreds);
+        } else {
+          credentials = JSON.parse(Buffer.from(rawCreds, 'base64').toString('utf-8'));
+        }
+      } catch (e) {
+        console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT:', e.message);
+      }
+    }
+    
     this.siteUrl = process.env.SEARCH_CONSOLE_SITE || 'https://planetebeauty.com/';
     
     if (credentials.client_email) {
