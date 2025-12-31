@@ -3,171 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STELLA - IA Autonome</title>
+    <title>STELLA - Copilote Business</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
     <style>
-        :root{--gold:#de9f49;--black:#121212;--white:#fff;--beige:#fdf8f3;--gray:#6b7280;--green:#10b981;--red:#ef4444}
+        :root{--gold:#de9f49;--black:#121212;--white:#fff;--beige:#fdf8f3;--gray:#6b7280;--green:#10b981;--red:#ef4444;--blue:#3b82f6}
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--beige);color:var(--black);min-height:100vh}
-        .header{background:linear-gradient(135deg,var(--black),#2d2d2d);color:var(--white);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+        .header{background:linear-gradient(135deg,var(--black),#1a1a2e);color:var(--white);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
         .logo{display:flex;align-items:center;gap:.75rem}
-        .logo-icon{font-size:1.75rem}
-        .logo-text{font-size:1.5rem;font-weight:700;color:var(--gold)}
+        .logo-icon{font-size:2rem;animation:glow 2s ease-in-out infinite}
+        @keyframes glow{0%,100%{filter:drop-shadow(0 0 5px rgba(222,159,73,.5))}50%{filter:drop-shadow(0 0 15px rgba(222,159,73,.8))}}
+        .logo-text{font-size:1.6rem;font-weight:700;background:linear-gradient(135deg,var(--gold),#f4d03f);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .logo-sub{font-size:.7rem;color:var(--gray)}
-        .status{display:flex;align-items:center;gap:.5rem;background:rgba(16,185,129,.2);padding:.5rem 1rem;border-radius:2rem;font-size:.8rem}
+        .status{display:flex;align-items:center;gap:.5rem;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);padding:.5rem 1rem;border-radius:2rem;font-size:.8rem}
         .dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-        .caps{background:var(--black);padding:.5rem 1rem;display:flex;gap:.5rem;overflow-x:auto;font-size:.7rem}
-        .cap{background:rgba(222,159,73,.2);color:var(--gold);padding:.2rem .6rem;border-radius:1rem;white-space:nowrap}
-        .container{max-width:900px;margin:0 auto;padding:1rem}
-        .card{background:var(--white);border-radius:1rem;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:1rem;overflow:hidden}
-        .card-head{background:var(--black);color:var(--white);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;font-size:.9rem;font-weight:600}
-        .kpis{display:flex;gap:.5rem;padding:.75rem;flex-wrap:wrap}
-        .kpi{background:var(--beige);padding:.5rem .75rem;border-radius:.5rem;text-align:center;flex:1;min-width:70px}
-        .kpi-label{font-size:.6rem;color:var(--gray);text-transform:uppercase}
-        .kpi-val{font-size:1.1rem;font-weight:700}
+        @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.2)}}
+        .container{max-width:1000px;margin:0 auto;padding:1rem}
+        .card{background:var(--white);border-radius:1rem;box-shadow:0 4px 15px rgba(0,0,0,.08);margin-bottom:1rem;overflow:hidden}
+        .card-head{background:linear-gradient(135deg,var(--black),#1a1a2e);color:var(--white);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;font-size:.9rem;font-weight:600}
+        .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.5rem;padding:.75rem}
+        .kpi{background:linear-gradient(135deg,var(--beige),#fff);padding:.6rem;border-radius:.6rem;text-align:center;border:1px solid #eee}
+        .kpi-label{font-size:.65rem;color:var(--gray);text-transform:uppercase;letter-spacing:.5px}
+        .kpi-val{font-size:1.2rem;font-weight:700}
         .kpi-val.bad{color:var(--red)}
         .kpi-val.good{color:var(--green)}
-        .chat-box{display:flex;flex-direction:column;height:calc(100vh - 220px);min-height:350px}
-        .messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.6rem}
-        .msg{max-width:88%;padding:.6rem .9rem;border-radius:.9rem;font-size:.88rem;line-height:1.45}
-        .msg.user{background:var(--gold);color:var(--white);align-self:flex-end;border-bottom-right-radius:.2rem}
-        .msg.bot{background:var(--beige);align-self:flex-start;border-bottom-left-radius:.2rem}
-        .msg.sys{background:#dbeafe;color:#1e40af;align-self:center;font-size:.75rem;padding:.4rem .8rem}
-        .msg h2,.msg h3{font-size:.95rem;margin:.4rem 0;color:var(--gold)}
-        .msg ul{margin-left:1.1rem}
-        .msg code{background:#e5e7eb;padding:.1rem .3rem;border-radius:.2rem;font-size:.8em}
-        .msg pre{background:#1f2937;color:#f3f4f6;padding:.6rem;border-radius:.4rem;overflow-x:auto;font-size:.75em;margin:.4rem 0}
-        .typing{display:flex;gap:4px;padding:.6rem .9rem;background:var(--beige);border-radius:.9rem;align-self:flex-start}
-        .typing span{width:7px;height:7px;background:var(--gray);border-radius:50%;animation:bounce 1.4s infinite}
+        .kpi-val.mid{color:var(--gold)}
+        .chat-box{display:flex;flex-direction:column;height:calc(100vh - 280px);min-height:400px}
+        .messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.7rem;background:linear-gradient(180deg,#fafafa,var(--white))}
+        .msg{max-width:85%;padding:.7rem 1rem;border-radius:1rem;font-size:.9rem;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+        .msg.user{background:linear-gradient(135deg,var(--gold),#e8a94b);color:var(--white);align-self:flex-end;border-bottom-right-radius:.3rem}
+        .msg.bot{background:var(--white);border:1px solid #eee;align-self:flex-start;border-bottom-left-radius:.3rem}
+        .msg.sys{background:linear-gradient(135deg,#dbeafe,#eff6ff);color:#1e40af;align-self:center;font-size:.75rem;padding:.4rem 1rem;border-radius:2rem}
+        .msg h2{font-size:1rem;margin:.5rem 0;color:var(--gold)}
+        .msg h3{font-size:.9rem;margin:.4rem 0;color:var(--black)}
+        .msg ul{margin:.3rem 0 .3rem 1.2rem}
+        .msg li{margin:.2rem 0}
+        .msg code{background:#f1f5f9;padding:.15rem .4rem;border-radius:.25rem;font-size:.8em;color:#334155}
+        .msg pre{background:#1e293b;color:#e2e8f0;padding:.7rem;border-radius:.5rem;overflow-x:auto;font-size:.75em;margin:.5rem 0}
+        .msg strong{color:var(--gold)}
+        .typing{display:flex;gap:5px;padding:.7rem 1rem;background:var(--white);border:1px solid #eee;border-radius:1rem;align-self:flex-start}
+        .typing span{width:8px;height:8px;background:var(--gold);border-radius:50%;animation:bounce 1.4s infinite}
         .typing span:nth-child(2){animation-delay:.2s}
         .typing span:nth-child(3){animation-delay:.4s}
-        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-        .input-area{padding:.75rem;border-top:1px solid #eee}
-        .quick{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem}
-        .qbtn{background:var(--white);border:1px solid var(--gold);color:var(--gold);padding:.3rem .6rem;border-radius:2rem;font-size:.7rem;cursor:pointer;transition:.2s}
-        .qbtn:hover{background:var(--gold);color:var(--white)}
-        .input-row{display:flex;gap:.4rem}
-        .input{flex:1;padding:.75rem;border:2px solid #e5e7eb;border-radius:.6rem;font-size:1rem;outline:none}
+        @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+        .input-area{padding:1rem;background:var(--white);border-top:1px solid #eee}
+        .quick{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.7rem}
+        .qbtn{background:var(--white);border:1px solid var(--gold);color:var(--gold);padding:.35rem .7rem;border-radius:2rem;font-size:.75rem;cursor:pointer;transition:all .2s}
+        .qbtn:hover{background:var(--gold);color:var(--white);transform:translateY(-1px)}
+        .input-row{display:flex;gap:.5rem}
+        .input{flex:1;padding:.8rem 1rem;border:2px solid #e5e7eb;border-radius:.7rem;font-size:1rem;outline:none;transition:border .2s}
         .input:focus{border-color:var(--gold)}
-        .send{background:var(--gold);color:var(--white);border:none;padding:.75rem 1rem;border-radius:.6rem;font-size:1rem;font-weight:600;cursor:pointer}
-        .send:disabled{background:#ccc}
-        .upload-btn{background:var(--beige);border:1px solid var(--gold);color:var(--gold);padding:.75rem;border-radius:.6rem;cursor:pointer;font-size:1rem}
-        .refresh{background:0;border:1px solid var(--gold);color:var(--gold);padding:.2rem .4rem;border-radius:.3rem;font-size:.65rem;cursor:pointer}
-        .session-info{font-size:.65rem;color:var(--gray);padding:.25rem .75rem;text-align:right}
-        @media(max-width:640px){.header{padding:.6rem .8rem}.logo-text{font-size:1.2rem}.chat-box{height:calc(100vh - 200px)}}
+        .send{background:linear-gradient(135deg,var(--gold),#e8a94b);color:var(--white);border:none;padding:.8rem 1.2rem;border-radius:.7rem;font-size:1rem;font-weight:600;cursor:pointer;transition:transform .2s}
+        .send:hover{transform:scale(1.02)}
+        .send:disabled{background:#ccc;transform:none}
+        .upload-btn{background:var(--beige);border:1px solid #ddd;color:var(--gray);padding:.8rem;border-radius:.7rem;cursor:pointer;font-size:1rem;transition:all .2s}
+        .upload-btn:hover{border-color:var(--gold);color:var(--gold)}
+        .refresh{background:transparent;border:1px solid rgba(222,159,73,.5);color:var(--gold);padding:.25rem .5rem;border-radius:.4rem;font-size:.7rem;cursor:pointer;transition:.2s}
+        .refresh:hover{background:rgba(222,159,73,.1)}
+        .session-bar{display:flex;justify-content:space-between;align-items:center;padding:.3rem 1rem;background:#f8fafc;font-size:.7rem;color:var(--gray)}
+        .memory-count{background:var(--gold);color:var(--white);padding:.15rem .5rem;border-radius:1rem;font-size:.65rem}
+        @media(max-width:640px){.header{padding:.6rem .8rem}.logo-text{font-size:1.3rem}.chat-box{height:calc(100vh - 260px)}.kpis{grid-template-columns:repeat(2,1fr)}}
     </style>
 </head>
 <body>
     <header class="header">
-        <div class="logo"><span class="logo-icon">⭐</span><div><div class="logo-text">STELLA</div><div class="logo-sub">IA Autonome v2.1</div></div></div>
-        <div class="status"><span class="dot"></span><span>En ligne</span></div>
+        <div class="logo">
+            <span class="logo-icon">⭐</span>
+            <div>
+                <div class="logo-text">STELLA</div>
+                <div class="logo-sub">Copilote Business v3.0</div>
+            </div>
+        </div>
+        <div class="status"><span class="dot"></span><span>Connectée</span></div>
     </header>
-    <div class="caps">
-        <span class="cap">📊 Shopify</span>
-        <span class="cap">🗄️ Supabase</span>
-        <span class="cap">💻 GitHub</span>
-        <span class="cap">🚀 Deploy</span>
-        <span class="cap">🧠 Mémoire</span>
-        <span class="cap">📎 Fichiers</span>
-    </div>
+    
     <main class="container">
         <div class="card">
-            <div class="card-head"><span>📊 KPIs</span><button class="refresh" onclick="loadKPIs()">🔄</button></div>
+            <div class="card-head">
+                <span>📊 KPIs Temps Réel</span>
+                <button class="refresh" onclick="loadKPIs()">🔄 Actualiser</button>
+            </div>
             <div class="kpis">
                 <div class="kpi"><div class="kpi-label">CA Jour</div><div class="kpi-val" id="ca">--</div></div>
                 <div class="kpi"><div class="kpi-label">Commandes</div><div class="kpi-val" id="cmd">--</div></div>
                 <div class="kpi"><div class="kpi-label">Panier</div><div class="kpi-val" id="pan">--</div></div>
                 <div class="kpi"><div class="kpi-label">Objectif</div><div class="kpi-val" id="prog">--%</div></div>
+                <div class="kpi"><div class="kpi-label">Statut</div><div class="kpi-val" id="statut">--</div></div>
             </div>
         </div>
+        
         <div class="card">
-            <div class="card-head"><span>💬 Chat</span><button class="refresh" onclick="newSession()">🆕 Nouveau</button></div>
-            <div class="session-info">Session: <span id="sid">-</span></div>
+            <div class="card-head">
+                <span>💬 Discussion avec STELLA</span>
+                <button class="refresh" onclick="newSession()">🆕 Nouvelle session</button>
+            </div>
+            <div class="session-bar">
+                <span>Session: <strong id="sid">-</strong></span>
+                <span class="memory-count" id="memcount">0 mémoires</span>
+            </div>
             <div class="chat-box">
                 <div class="messages" id="msgs"></div>
                 <div class="input-area">
                     <div class="quick">
-                        <button class="qbtn" onclick="ask('Briefing du jour')">📋 Briefing</button>
-                        <button class="qbtn" onclick="ask('Liste les fichiers GitHub')">📁 GitHub</button>
-                        <button class="qbtn" onclick="ask('Quelles tables dans Supabase ?')">🗄️ Tables</button>
-                        <button class="qbtn" onclick="ask('Modifie ton code pour ajouter une fonctionnalité de test')">🔧 Auto-modifier</button>
+                        <button class="qbtn" onclick="ask('Briefing complet du jour')">📋 Briefing</button>
+                        <button class="qbtn" onclick="ask('Où en est le projet STELLA ?')">📊 État projet</button>
+                        <button class="qbtn" onclick="ask('Quelles sont les tâches prioritaires ?')">🎯 Priorités</button>
+                        <button class="qbtn" onclick="ask('Analyse les concurrents')">🔍 Concurrence</button>
+                        <button class="qbtn" onclick="ask('Que dois-je faire sur le site ?')">🛠️ Actions site</button>
                     </div>
                     <div class="input-row">
                         <label class="upload-btn" title="Envoyer un fichier">📎<input type="file" id="file" style="display:none" onchange="uploadFile()"></label>
-                        <input type="text" class="input" id="inp" placeholder="Message..." onkeypress="if(event.key==='Enter')send()">
-                        <button class="send" id="btn" onclick="send()">→</button>
+                        <input type="text" class="input" id="inp" placeholder="Parle-moi comme à ton copilote..." onkeypress="if(event.key==='Enter')send()">
+                        <button class="send" id="btn" onclick="send()">Envoyer</button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
     <script>
         const API='';
-        let sid=localStorage.getItem('stella_sid')||'s-'+Date.now();
+        let sid=localStorage.getItem('stella_sid')||'benoit-'+Date.now();
         localStorage.setItem('stella_sid',sid);
-        document.getElementById('sid').textContent=sid.substring(0,12)+'...';
+        document.getElementById('sid').textContent=sid.substring(0,15);
 
-        function md(t){if(!t)return'';return t.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>').replace(/\n/g,'<br>');}
+        function md(t){
+            if(!t)return'';
+            return t
+                .replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+                .replace(/`([^`]+)`/g,'<code>$1</code>')
+                .replace(/^### (.*$)/gm,'<h3>$1</h3>')
+                .replace(/^## (.*$)/gm,'<h2>$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+                .replace(/^- (.*$)/gm,'<li>$1</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
+                .replace(/\n/g,'<br>');
+        }
 
         async function loadKPIs(){
-            try{const r=await fetch(API+'/kpis');const d=await r.json();
-            const ca=parseFloat(d.ca_jour)||0;
-            document.getElementById('ca').textContent=ca.toLocaleString('fr-FR')+'€';
-            document.getElementById('ca').className='kpi-val '+(ca<1000?'bad':ca>=2000?'good':'');
-            document.getElementById('cmd').textContent=d.nb_commandes||0;
-            document.getElementById('pan').textContent=(d.panier_moyen||0)+'€';
-            document.getElementById('prog').textContent=d.progression||'0%';}catch(e){}}
+            try{
+                const r=await fetch(API+'/kpis');
+                const d=await r.json();
+                const ca=parseFloat(d.ca_jour)||0;
+                document.getElementById('ca').textContent=d.ca_jour||'0€';
+                document.getElementById('ca').className='kpi-val '+(ca<1000?'bad':ca>=2000?'good':'mid');
+                document.getElementById('cmd').textContent=d.nb_commandes||0;
+                document.getElementById('pan').textContent=d.panier_moyen||'0€';
+                document.getElementById('prog').textContent=d.progression||'0%';
+                document.getElementById('statut').textContent=d.statut||'--';
+            }catch(e){console.error('KPIs error',e)}
+        }
+
+        async function loadMemoryCount(){
+            try{
+                const r=await fetch(API+'/memory');
+                const d=await r.json();
+                document.getElementById('memcount').textContent=(d.memories?.length||0)+' mémoires';
+            }catch(e){}
+        }
 
         async function loadHistory(){
-            try{const r=await fetch(API+'/conversations/'+sid);const d=await r.json();
-            const box=document.getElementById('msgs');
-            box.innerHTML='<div class="msg sys">⭐ STELLA v2.1 - Conversations persistantes. Session: '+sid.substring(0,8)+'</div>';
-            if(d.messages&&d.messages.length>0){
-                for(const m of d.messages){
-                    if(m.role==='user'&&typeof m.content==='string'){
-                        box.innerHTML+=`<div class="msg user">${esc(m.content)}</div>`;
-                    }else if(m.role==='assistant'){
-                        const txt=Array.isArray(m.content)?m.content.find(b=>b.type==='text')?.text:m.content;
-                        if(txt)box.innerHTML+=`<div class="msg bot">${md(txt)}</div>`;
+            try{
+                const r=await fetch(API+'/conversations/'+sid);
+                const d=await r.json();
+                const box=document.getElementById('msgs');
+                box.innerHTML='<div class="msg sys">⭐ STELLA v3.0 - Ton copilote business. Je connais tout le projet.</div>';
+                if(d.messages&&d.messages.length>0){
+                    for(const m of d.messages){
+                        if(m.role==='user'&&typeof m.content==='string'){
+                            box.innerHTML+=`<div class="msg user">${esc(m.content)}</div>`;
+                        }else if(m.role==='assistant'){
+                            const txt=Array.isArray(m.content)?m.content.find(b=>b.type==='text')?.text:m.content;
+                            if(txt)box.innerHTML+=`<div class="msg bot">${md(txt)}</div>`;
+                        }
                     }
+                    box.scrollTop=box.scrollHeight;
                 }
-                box.scrollTop=box.scrollHeight;
-            }}catch(e){document.getElementById('msgs').innerHTML='<div class="msg sys">⭐ STELLA v2.1 Autonome. Nouvelle session.</div>';}}
+            }catch(e){
+                document.getElementById('msgs').innerHTML='<div class="msg sys">⭐ STELLA v3.0 prête. Je suis ton copilote business.</div>';
+            }
+        }
 
         async function send(){
-            const i=document.getElementById('inp');const m=i.value.trim();if(!m)return;
-            const box=document.getElementById('msgs');const btn=document.getElementById('btn');
-            box.innerHTML+=`<div class="msg user">${esc(m)}</div>`;i.value='';btn.disabled=true;
+            const i=document.getElementById('inp');
+            const m=i.value.trim();
+            if(!m)return;
+            const box=document.getElementById('msgs');
+            const btn=document.getElementById('btn');
+            box.innerHTML+=`<div class="msg user">${esc(m)}</div>`;
+            i.value='';
+            btn.disabled=true;
             box.innerHTML+=`<div class="typing" id="t"><span></span><span></span><span></span></div>`;
             box.scrollTop=box.scrollHeight;
-            try{const r=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m,session_id:sid})});
-            const d=await r.json();document.getElementById('t')?.remove();
-            box.innerHTML+=`<div class="msg bot">${d.success?md(d.message):'❌ '+d.error}</div>`;}
-            catch(e){document.getElementById('t')?.remove();box.innerHTML+=`<div class="msg bot">❌ Erreur connexion</div>`;}
-            btn.disabled=false;box.scrollTop=box.scrollHeight;loadKPIs();}
+            try{
+                const r=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m,session_id:sid})});
+                const d=await r.json();
+                document.getElementById('t')?.remove();
+                box.innerHTML+=`<div class="msg bot">${d.success?md(d.message):'❌ '+d.error}</div>`;
+            }catch(e){
+                document.getElementById('t')?.remove();
+                box.innerHTML+=`<div class="msg bot">❌ Erreur de connexion</div>`;
+            }
+            btn.disabled=false;
+            box.scrollTop=box.scrollHeight;
+            loadKPIs();
+            loadMemoryCount();
+        }
 
         async function uploadFile(){
-            const f=document.getElementById('file').files[0];if(!f)return;
-            const box=document.getElementById('msgs');const btn=document.getElementById('btn');
-            box.innerHTML+=`<div class="msg user">📎 ${f.name}</div>`;btn.disabled=true;
+            const f=document.getElementById('file').files[0];
+            if(!f)return;
+            const box=document.getElementById('msgs');
+            const btn=document.getElementById('btn');
+            box.innerHTML+=`<div class="msg user">📎 ${f.name}</div>`;
+            btn.disabled=true;
             box.innerHTML+=`<div class="typing" id="t"><span></span><span></span><span></span></div>`;
             box.scrollTop=box.scrollHeight;
             const reader=new FileReader();
             reader.onload=async function(e){
-                const content=e.target.result;
-                try{const r=await fetch(API+'/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:f.name,content:content,session_id:sid})});
-                const d=await r.json();document.getElementById('t')?.remove();
-                box.innerHTML+=`<div class="msg bot">${d.success?md(d.message):'❌ '+d.error}</div>`;}
-                catch(e){document.getElementById('t')?.remove();box.innerHTML+=`<div class="msg bot">❌ Erreur upload</div>`;}
-                btn.disabled=false;box.scrollTop=box.scrollHeight;};
-            reader.readAsText(f);}
+                try{
+                    const r=await fetch(API+'/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:f.name,content:e.target.result,session_id:sid})});
+                    const d=await r.json();
+                    document.getElementById('t')?.remove();
+                    box.innerHTML+=`<div class="msg bot">${d.success?md(d.message):'❌ '+d.error}</div>`;
+                }catch(e){
+                    document.getElementById('t')?.remove();
+                    box.innerHTML+=`<div class="msg bot">❌ Erreur upload</div>`;
+                }
+                btn.disabled=false;
+                box.scrollTop=box.scrollHeight;
+            };
+            reader.readAsText(f);
+        }
 
         function ask(q){document.getElementById('inp').value=q;send();}
         function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
-        function newSession(){sid='s-'+Date.now();localStorage.setItem('stella_sid',sid);document.getElementById('sid').textContent=sid.substring(0,12)+'...';document.getElementById('msgs').innerHTML='<div class="msg sys">⭐ Nouvelle session créée</div>';}
+        function newSession(){
+            sid='benoit-'+Date.now();
+            localStorage.setItem('stella_sid',sid);
+            document.getElementById('sid').textContent=sid.substring(0,15);
+            document.getElementById('msgs').innerHTML='<div class="msg sys">⭐ Nouvelle session créée. Je suis prête!</div>';
+        }
 
-        loadKPIs();loadHistory();setInterval(loadKPIs,5*60*1000);
+        // Init
+        loadKPIs();
+        loadHistory();
+        loadMemoryCount();
+        setInterval(loadKPIs, 5*60*1000);
     </script>
 </body>
 </html>
