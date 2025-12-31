@@ -1,400 +1,259 @@
-/**
- * STELLA BRAIN - Agent Autonome Railway
- * Utilise Claude API (Anthropic) - Pas de compression
- * Chaque appel = contexte frais depuis Supabase
- */
+// STELLA Brain - Agent Autonome Railway
+// Dashboard + API pour Planetebeauty.com
 
-const express = require('express');
-const Anthropic = require('@anthropic-ai/sdk');
-const { createClient } = require('@supabase/supabase-js');
-const cron = require('node-cron');
+import Anthropic from '@anthropic-ai/sdk';
+import { createClient } from '@supabase/supabase-js';
+import express from 'express';
+import cron from 'node-cron';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ============================================================
+// Configuration
+// ============================================================
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
+const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+
+const SYSTEM_PROMPT = `Tu es STELLA, l'assistante IA business de Planetebeauty.com.
+
+CONTEXTE BUSINESS:
+- Site e-commerce parfumerie de niche
+- CA annuel: 750 000€ HT
+- Objectif CA/jour: 3 000€ HT minimum
+- Clients: 29 641
+- Marge brute: 41%
+- Panier moyen cible: 200€
+
+TES RÈGLES:
+1. ANTI-HALLUCINATION: Ne jamais inventer de chiffres. Si tu ne sais pas, dis-le.
+2. Sois directe, concise, actionnable
+3. Priorise toujours le CA et la conversion
+4. Alerte sur les anomalies (CA bas, stock, etc.)
+5. Propose des actions concrètes
+
+FORMAT RÉPONSES:
+- Utilise le markdown
+- Bullet points pour les actions
+- Emojis pour la lisibilité
+- Maximum 500 mots sauf demande explicite`;
+
+// ============================================================
+// Express Server
+// ============================================================
 const app = express();
 app.use(express.json());
 
-// ============================================================
-// CONFIGURATION
-// ============================================================
-
-const CONFIG = {
-  PORT: process.env.PORT || 3000,
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-  SUPABASE_URL: process.env.SUPABASE_URL || 'https://upqldbeaxuikbzohlgne.supabase.co',
-  SUPABASE_KEY: process.env.SUPABASE_SERVICE_KEY,
-  SHOPIFY_STORE: process.env.SHOPIFY_STORE || 'planetemode.myshopify.com',
-  SHOPIFY_TOKEN: process.env.SHOPIFY_ACCESS_TOKEN,
-  MODEL: 'claude-sonnet-4-20250514',
-  MAX_TOKENS: 4096
-};
-
-// Clients
-const anthropic = new Anthropic({ apiKey: CONFIG.ANTHROPIC_API_KEY });
-const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+// Serve static files (dashboard)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================
-// SYSTÈME PROMPT STELLA
+// Shopify GraphQL
 // ============================================================
-
-const STELLA_SYSTEM_PROMPT = `Tu es STELLA, l'IA copilote business de Planetebeauty.com.
-
-## CONTEXTE BUSINESS
-- Entreprise : BHTC EURL (Holding)
-- Site : Planetebeauty.com (parfumerie de niche)
-- CA 2025 cible : 750 000€ HT
-- CA/jour cible : 3 000€ HT minimum
-- Clients : 29 641
-- Marge brute : 41%
-- Panier moyen cible : 200€
-
-## TES CAPACITÉS
-- Analyser les KPIs Shopify en temps réel
-- Détecter les opportunités de CA
-- Alerter sur les problèmes (stock, commandes, etc.)
-- Recommander des actions concrètes
-- Répondre aux questions business
-
-## RÈGLES ABSOLUES
-1. ANTI-HALLUCINATION : Jamais de chiffre sans source vérifiée
-2. Sois CONCIS et ACTIONNABLE
-3. Priorise : CA > Conversion > Acquisition
-4. Si tu ne sais pas, dis-le
-
-## FORMAT RÉPONSE
-- Bullet points pour la clarté
-- Chiffres précis avec source
-- Actions concrètes avec priorité`;
-
-// ============================================================
-// FONCTIONS UTILITAIRES
-// ============================================================
-
-/**
- * Charge le contexte depuis Supabase
- */
-async function loadContext() {
-  try {
-    // Dernières sessions
-    const { data: sessions } = await supabase
-      .from('stella_sessions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    // Tâches pending
-    const { data: tasks } = await supabase
-      .from('stella_tasks')
-      .select('*')
-      .eq('status', 'pending')
-      .order('priority', { ascending: false })
-      .limit(10);
-
-    // Config
-    const { data: config } = await supabase
-      .from('stella_config')
-      .select('*')
-      .in('key', ['business_context', 'current_priorities']);
-
-    return {
-      recent_sessions: sessions || [],
-      pending_tasks: tasks || [],
-      config: config || []
-    };
-  } catch (error) {
-    console.error('Erreur chargement contexte:', error);
-    return { recent_sessions: [], pending_tasks: [], config: [] };
-  }
-}
-
-/**
- * Récupère les KPIs Shopify du jour
- */
-async function getShopifyKPIs() {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const query = `{
-      orders(first: 50, query: "created_at:>=${today}") {
-        edges {
-          node {
-            id
-            name
-            totalPriceSet { shopMoney { amount currencyCode } }
-            createdAt
-            lineItems(first: 5) {
-              edges {
-                node { title quantity }
-              }
-            }
-          }
-        }
-      }
-    }`;
-
-    const response = await fetch(
-      `https://${CONFIG.SHOPIFY_STORE}/admin/api/2024-01/graphql.json`,
-      {
+async function shopifyGraphQL(query) {
+    const response = await fetch(`https://${SHOPIFY_STORE}/admin/api/2024-01/graphql.json`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Access-Token': CONFIG.SHOPIFY_TOKEN
+            'Content-Type': 'application/json',
+            'X-Shopify-Access-Token': SHOPIFY_TOKEN
         },
         body: JSON.stringify({ query })
-      }
-    );
-
-    const data = await response.json();
-    const orders = data?.data?.orders?.edges || [];
-    
-    const totalCA = orders.reduce((sum, o) => 
-      sum + parseFloat(o.node.totalPriceSet.shopMoney.amount), 0
-    );
-    
-    return {
-      date: today,
-      nb_commandes: orders.length,
-      ca_jour: totalCA.toFixed(2),
-      panier_moyen: orders.length > 0 ? (totalCA / orders.length).toFixed(2) : 0,
-      objectif: 3000,
-      progression: ((totalCA / 3000) * 100).toFixed(1)
-    };
-  } catch (error) {
-    console.error('Erreur Shopify:', error);
-    return null;
-  }
+    });
+    return response.json();
 }
 
-/**
- * Appelle Claude API avec contexte frais
- */
-async function askClaude(userMessage, additionalContext = {}) {
-  try {
-    // Charger contexte Supabase
-    const context = await loadContext();
+async function getShopifyKPIs() {
+    const today = new Date().toISOString().split('T')[0];
+    const query = `{
+        orders(first: 50, query: "created_at:>=${today}") {
+            edges {
+                node {
+                    id
+                    totalPriceSet { shopMoney { amount } }
+                    createdAt
+                }
+            }
+        }
+    }`;
     
-    // Charger KPIs Shopify
+    try {
+        const result = await shopifyGraphQL(query);
+        const orders = result.data?.orders?.edges || [];
+        const totalCA = orders.reduce((sum, o) => sum + parseFloat(o.node.totalPriceSet.shopMoney.amount), 0);
+        const nbCommandes = orders.length;
+        const panierMoyen = nbCommandes > 0 ? totalCA / nbCommandes : 0;
+        
+        return {
+            date: today,
+            nb_commandes: nbCommandes,
+            ca_jour: totalCA.toFixed(2),
+            panier_moyen: Math.round(panierMoyen),
+            objectif: 3000,
+            progression: ((totalCA / 3000) * 100).toFixed(1)
+        };
+    } catch (error) {
+        console.error('Erreur Shopify:', error);
+        return {
+            date: today,
+            nb_commandes: 0,
+            ca_jour: "0.00",
+            panier_moyen: 0,
+            objectif: 3000,
+            progression: "0.0"
+        };
+    }
+}
+
+// ============================================================
+// Claude API
+// ============================================================
+async function askClaude(userMessage, context = {}) {
     const kpis = await getShopifyKPIs();
     
-    // Construire le message avec contexte
-    const contextMessage = `
-## CONTEXTE ACTUEL (${new Date().toLocaleString('fr-FR')})
+    const fullMessage = `
+DONNÉES EN TEMPS RÉEL:
+- Date: ${kpis.date}
+- CA Jour: ${kpis.ca_jour}€ / 3 000€ objectif (${kpis.progression}%)
+- Commandes: ${kpis.nb_commandes}
+- Panier moyen: ${kpis.panier_moyen}€
 
-### KPIs Shopify du jour
-${kpis ? `
-- CA du jour : ${kpis.ca_jour}€ (objectif: ${kpis.objectif}€)
-- Progression : ${kpis.progression}%
-- Commandes : ${kpis.nb_commandes}
-- Panier moyen : ${kpis.panier_moyen}€
-` : 'Erreur récupération KPIs'}
-
-### Tâches en attente
-${context.pending_tasks.length > 0 
-  ? context.pending_tasks.map(t => `- [${t.priority}] ${t.title}`).join('\n')
-  : 'Aucune tâche en attente'}
-
-### Contexte additionnel
-${JSON.stringify(additionalContext, null, 2)}
-
----
-
-## QUESTION UTILISATEUR
+QUESTION/DEMANDE:
 ${userMessage}
 `;
 
-    // Appel Claude API
     const response = await anthropic.messages.create({
-      model: CONFIG.MODEL,
-      max_tokens: CONFIG.MAX_TOKENS,
-      system: STELLA_SYSTEM_PROMPT,
-      messages: [
-        { role: 'user', content: contextMessage }
-      ]
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: fullMessage }]
     });
-
-    const assistantMessage = response.content[0].type === 'text' 
-      ? response.content[0].text 
-      : '';
-
-    // Sauvegarder la session
-    await supabase.from('stella_sessions').insert({
-      user_message: userMessage,
-      assistant_message: assistantMessage,
-      context: { kpis, tasks: context.pending_tasks.length },
-      tokens_used: response.usage?.input_tokens + response.usage?.output_tokens,
-      model: CONFIG.MODEL
-    });
-
+    
     return {
-      success: true,
-      message: assistantMessage,
-      kpis,
-      tokens: response.usage
+        message: response.content[0].text,
+        kpis,
+        tokens: response.usage
     };
-
-  } catch (error) {
-    console.error('Erreur Claude API:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
 // ============================================================
-// ENDPOINTS API
+// API Routes
 // ============================================================
+
+// Root - serve dashboard
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Health check
 app.get('/health', async (req, res) => {
-  const kpis = await getShopifyKPIs();
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    services: {
-      anthropic: !!CONFIG.ANTHROPIC_API_KEY,
-      supabase: !!CONFIG.SUPABASE_KEY,
-      shopify: !!CONFIG.SHOPIFY_TOKEN
-    },
-    kpis_sample: kpis
-  });
-});
-
-// Chat endpoint - Poser une question à STELLA
-app.post('/chat', async (req, res) => {
-  const { message } = req.body;
-  
-  if (!message) {
-    return res.status(400).json({ error: 'Message requis' });
-  }
-
-  const response = await askClaude(message);
-  res.json(response);
-});
-
-// Briefing du jour
-app.get('/briefing', async (req, res) => {
-  const response = await askClaude(
-    'Donne-moi le briefing complet du jour : KPIs, alertes, priorités, recommandations.'
-  );
-  res.json(response);
+    const kpis = await getShopifyKPIs();
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        services: {
+            anthropic: !!process.env.ANTHROPIC_API_KEY,
+            supabase: !!process.env.SUPABASE_URL,
+            shopify: !!process.env.SHOPIFY_STORE
+        },
+        kpis_sample: kpis
+    });
 });
 
 // KPIs temps réel
 app.get('/kpis', async (req, res) => {
-  const kpis = await getShopifyKPIs();
-  res.json(kpis);
+    const kpis = await getShopifyKPIs();
+    res.json(kpis);
 });
 
-// Créer une tâche
-app.post('/tasks', async (req, res) => {
-  const { title, description, priority = 'normal' } = req.body;
-  
-  const { data, error } = await supabase
-    .from('stella_tasks')
-    .insert({ title, description, priority, status: 'pending' })
-    .select()
-    .single();
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-  
-  res.json(data);
+// Briefing du jour
+app.get('/briefing', async (req, res) => {
+    try {
+        const result = await askClaude(
+            "Génère le briefing business du jour. Analyse la situation actuelle, identifie les alertes et donne les 3 priorités d'action."
+        );
+        res.json({ success: true, ...result });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
-// Liste des tâches
+// Chat
+app.post('/chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message) {
+            return res.status(400).json({ success: false, error: 'Message requis' });
+        }
+        const result = await askClaude(message);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Tasks
 app.get('/tasks', async (req, res) => {
-  const { data } = await supabase
-    .from('stella_tasks')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(20);
-  
-  res.json(data || []);
+    const { data, error } = await supabase
+        .from('stella_tasks')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+    res.json({ tasks: data || [], error });
+});
+
+app.post('/tasks', async (req, res) => {
+    const { title, description, priority = 'normal' } = req.body;
+    const { data, error } = await supabase
+        .from('stella_tasks')
+        .insert({ title, description, priority, status: 'pending' })
+        .select()
+        .single();
+    res.json({ task: data, error });
 });
 
 // ============================================================
-// CRON JOBS - Tâches automatiques
+// Cron Jobs
 // ============================================================
 
-// Briefing matin à 8h
-cron.schedule('0 8 * * *', async () => {
-  console.log('🌅 Briefing matin...');
-  const response = await askClaude(
-    'Briefing matin automatique : analyse les KPIs, identifie les alertes et priorités du jour.'
-  );
-  
-  // Sauvegarder comme tâche complétée
-  await supabase.from('stella_tasks').insert({
-    title: 'Briefing matin automatique',
-    description: response.message,
-    priority: 'info',
-    status: 'completed',
-    result: response
-  });
-  
-  console.log('✅ Briefing envoyé');
-}, { timezone: 'Europe/Paris' });
+// Briefing matin 8h Paris (7h UTC en hiver)
+cron.schedule('0 7 * * *', async () => {
+    console.log('⏰ Cron: Briefing matin');
+    const result = await askClaude("Briefing matinal complet avec priorités du jour.");
+    console.log('📋 Briefing généré:', result.message.substring(0, 200));
+});
 
 // Check KPIs toutes les heures
 cron.schedule('0 * * * *', async () => {
-  console.log('📊 Check KPIs horaire...');
-  const kpis = await getShopifyKPIs();
-  
-  if (kpis) {
-    // Alerte si CA trop bas à 18h
-    const hour = new Date().getHours();
-    const expectedProgress = (hour / 24) * 100;
+    console.log('⏰ Cron: Check KPIs horaire');
+    const kpis = await getShopifyKPIs();
+    const progression = parseFloat(kpis.progression);
+    const heure = new Date().getHours();
+    const progressionAttendue = (heure / 24) * 100;
     
-    if (hour >= 18 && parseFloat(kpis.progression) < expectedProgress * 0.7) {
-      console.log('⚠️ Alerte : CA en retard');
-      await askClaude(
-        `ALERTE : CA à ${kpis.progression}% alors qu'on devrait être à ${expectedProgress.toFixed(0)}%. Analyse et recommandations urgentes.`
-      );
+    if (progression < progressionAttendue - 20) {
+        console.log(`🚨 ALERTE: CA en retard! ${kpis.ca_jour}€ vs objectif`);
+        // TODO: Envoyer notification
     }
-  }
-}, { timezone: 'Europe/Paris' });
+});
 
-// Récap soir à 20h
-cron.schedule('0 20 * * *', async () => {
-  console.log('🌙 Récap soir...');
-  const response = await askClaude(
-    'Récap de fin de journée : bilan CA, commandes marquantes, ce qui a marché, points d\'attention pour demain.'
-  );
-  
-  await supabase.from('stella_tasks').insert({
-    title: 'Récap soir automatique',
-    description: response.message,
-    priority: 'info',
-    status: 'completed',
-    result: response
-  });
-  
-  console.log('✅ Récap envoyé');
-}, { timezone: 'Europe/Paris' });
+// Récap soir 20h Paris (19h UTC en hiver)
+cron.schedule('0 19 * * *', async () => {
+    console.log('⏰ Cron: Récap soir');
+    const result = await askClaude("Récapitulatif de la journée: CA final, points forts, points à améliorer demain.");
+    console.log('📊 Récap:', result.message.substring(0, 200));
+});
 
 // ============================================================
-// DÉMARRAGE
+// Start Server
 // ============================================================
-
-app.listen(CONFIG.PORT, () => {
-  console.log(`
-🌟 ════════════════════════════════════════════════════════════
-   STELLA BRAIN - Agent Autonome
-   Port: ${CONFIG.PORT}
-   Model: ${CONFIG.MODEL}
-   
-   Endpoints:
-   - GET  /health   → Status système
-   - GET  /briefing → Briefing du jour
-   - GET  /kpis     → KPIs temps réel
-   - POST /chat     → Poser une question
-   - GET  /tasks    → Liste tâches
-   - POST /tasks    → Créer tâche
-   
-   Cron Jobs:
-   - 08:00 → Briefing matin
-   - Toutes les heures → Check KPIs
-   - 20:00 → Récap soir
-════════════════════════════════════════════════════════════ 🌟
-  `);
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+    console.log(`🌟 STELLA Brain démarré sur port ${PORT}`);
+    console.log(`📊 Dashboard: http://localhost:${PORT}`);
+    console.log(`🔌 API: http://localhost:${PORT}/health`);
 });
