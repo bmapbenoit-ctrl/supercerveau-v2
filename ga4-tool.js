@@ -1,44 +1,36 @@
 // ga4-tool.js - Outil GA4 pour STELLA v3.1 (ES Module)
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 
 class GA4Tool {
   constructor() {
-    this.propertyId = process.env.GA4_PROPERTY_ID || '427142120';
-    this.connected = false;
-    this.client = null;
+    let credentials = {};
     
+    // Support base64 OU JSON direct
     const rawCreds = process.env.GOOGLE_SERVICE_ACCOUNT || '';
-    if (!rawCreds) {
-      console.log('⚠️ GA4 non configuré (GOOGLE_SERVICE_ACCOUNT manquant)');
-      return;
+    if (rawCreds) {
+      try {
+        if (rawCreds.startsWith('{')) {
+          // JSON direct
+          credentials = JSON.parse(rawCreds);
+        } else {
+          // Base64 encoded (plus fiable pour les clés privées)
+          credentials = JSON.parse(Buffer.from(rawCreds, 'base64').toString('utf-8'));
+        }
+      } catch (e) {
+        console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT:', e.message);
+      }
     }
     
-    try {
-      let credentials;
-      if (rawCreds.startsWith('{')) {
-        credentials = JSON.parse(rawCreds);
-      } else {
-        credentials = JSON.parse(Buffer.from(rawCreds, 'base64').toString('utf-8'));
-      }
-      
-      // Fix escaped newlines
-      if (credentials.private_key) {
-        credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
-      }
-      
-      // Écrire dans un fichier temporaire (contourne le bug OpenSSL)
-      const tmpFile = path.join(os.tmpdir(), 'ga-credentials.json');
-      fs.writeFileSync(tmpFile, JSON.stringify(credentials));
-      
-      this.client = new BetaAnalyticsDataClient({ keyFilename: tmpFile });
+    this.propertyId = process.env.GA4_PROPERTY_ID || '427142120';
+    
+    if (credentials.client_email) {
+      this.client = new BetaAnalyticsDataClient({ credentials });
       this.connected = true;
       console.log('✅ GA4 connecté - Property:', this.propertyId);
-    } catch (e) {
-      console.error('❌ Erreur init GA4:', e.message);
+    } else {
+      this.connected = false;
+      console.log('⚠️ GA4 non configuré (GOOGLE_SERVICE_ACCOUNT manquant ou invalide)');
     }
   }
 
