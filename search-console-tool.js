@@ -1,48 +1,40 @@
 // search-console-tool.js - Outil Search Console pour STELLA v3.1 (ES Module)
 
 import { google } from 'googleapis';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 
 class SearchConsoleTool {
   constructor() {
-    this.siteUrl = process.env.SEARCH_CONSOLE_SITE || 'https://planetebeauty.com/';
-    this.connected = false;
-    this.searchConsole = null;
+    let credentials = {};
     
+    // Support base64 OU JSON direct
     const rawCreds = process.env.GOOGLE_SERVICE_ACCOUNT || '';
-    if (!rawCreds) {
-      console.log('⚠️ Search Console non configuré');
-      return;
+    if (rawCreds) {
+      try {
+        if (rawCreds.startsWith('{')) {
+          // JSON direct
+          credentials = JSON.parse(rawCreds);
+        } else {
+          // Base64 encoded (plus fiable pour les clés privées)
+          credentials = JSON.parse(Buffer.from(rawCreds, 'base64').toString('utf-8'));
+        }
+      } catch (e) {
+        console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT:', e.message);
+      }
     }
     
-    try {
-      let credentials;
-      if (rawCreds.startsWith('{')) {
-        credentials = JSON.parse(rawCreds);
-      } else {
-        credentials = JSON.parse(Buffer.from(rawCreds, 'base64').toString('utf-8'));
-      }
-      
-      // Fix escaped newlines
-      if (credentials.private_key) {
-        credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
-      }
-      
-      // Écrire dans un fichier temporaire
-      const tmpFile = path.join(os.tmpdir(), 'gsc-credentials.json');
-      fs.writeFileSync(tmpFile, JSON.stringify(credentials));
-      
+    this.siteUrl = process.env.SEARCH_CONSOLE_SITE || 'https://planetebeauty.com/';
+    
+    if (credentials.client_email) {
       const auth = new google.auth.GoogleAuth({
-        keyFilename: tmpFile,
+        credentials: credentials,
         scopes: ['https://www.googleapis.com/auth/webmasters.readonly']
       });
       this.searchConsole = google.searchconsole({ version: 'v1', auth });
       this.connected = true;
       console.log('✅ Search Console connecté - Site:', this.siteUrl);
-    } catch (e) {
-      console.error('❌ Erreur init Search Console:', e.message);
+    } else {
+      this.connected = false;
+      console.log('⚠️ Search Console non configuré');
     }
   }
 
