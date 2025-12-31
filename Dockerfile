@@ -7,6 +7,6 @@ RUN npm install --production
 
 COPY . .
 
-EXPOSE 3001
+EXPOSE 3000
 
-CMD ["node", "supercerveau.js"]
+CMD ["node", "index.js"]
