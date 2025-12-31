@@ -1,19 +1,20 @@
 {
-  "name": "supercerveau-unifie",
-  "version": "3.0.0",
-  "description": "Supercerveau Unifié Planetebeauty - Architecture Sidekick complète",
-  "main": "supercerveau-unifie.js",
+  "name": "stella-brain",
+  "version": "1.0.0",
+  "description": "STELLA - Agent IA autonome pour Planetebeauty",
+  "main": "index.js",
   "scripts": {
-    "start": "node supercerveau-unifie.js",
-    "dev": "node --watch supercerveau-unifie.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "@supabase/supabase-js": "^2.39.0",
-    "@upstash/redis": "^1.28.0",
     "@anthropic-ai/sdk": "^0.32.1",
-    "nodemailer": "^6.9.8",
-    "uuid": "^9.0.0"
+    "@supabase/supabase-js": "^2.47.12",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
   },
   "engines": {
     "node": ">=18.0.0"
