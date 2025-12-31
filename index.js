@@ -1,4 +1,4 @@
-// STELLA v3.0 - Copilote Business Complet
+// STELLA v3.1 - Copilote Business Complet + GA4 + Search Console
 // Remplace Claude.ai pour Benoit - Toute la connaissance du projet
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -7,6 +7,8 @@ import express from 'express';
 import cron from 'node-cron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import GA4Tool from './ga4-tool.js';
+import SearchConsoleTool from './search-console-tool.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +20,23 @@ const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
 const SHOPIFY_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_PAT;
 const GITHUB_REPO = 'bmapbenoit-ctrl/supercerveau-v2';
+
+// ============================================================
+// GOOGLE ANALYTICS & SEARCH CONSOLE
+// ============================================================
+let ga4 = null;
+let searchConsole = null;
+
+if (process.env.GOOGLE_SERVICE_ACCOUNT) {
+    try {
+        ga4 = new GA4Tool();
+        searchConsole = new SearchConsoleTool();
+    } catch (error) {
+        console.error('⚠️ Erreur init Google APIs:', error.message);
+    }
+} else {
+    console.log('⚠️ GOOGLE_SERVICE_ACCOUNT non configuré - GA4/Search Console désactivés');
+}
 
 // ============================================================
 // TOOLS - Toutes les capacités de STELLA
@@ -38,7 +57,20 @@ const TOOLS = [
     { name: "memory_list", description: "Lister toute la mémoire par catégorie", input_schema: { type: "object", properties: { category: { type: "string" } }, required: [] } },
     { name: "task_create", description: "Créer une tâche", input_schema: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, priority: { type: "string" }, due_date: { type: "string" } }, required: ["title"] } },
     { name: "task_list", description: "Lister les tâches", input_schema: { type: "object", properties: { status: { type: "string" } }, required: [] } },
-    { name: "web_search", description: "Recherche web", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } }
+    { name: "web_search", description: "Recherche web", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
+    // NOUVEAUX OUTILS GA4
+    { name: "ga4_kpis", description: "KPIs Google Analytics (sessions, users, revenue, conversions)", input_schema: { type: "object", properties: { days: { type: "number", description: "Nombre de jours (défaut: 7)" } }, required: [] } },
+    { name: "ga4_daily", description: "Données GA4 par jour", input_schema: { type: "object", properties: { days: { type: "number" } }, required: [] } },
+    { name: "ga4_sources", description: "Sources de trafic GA4 (google, facebook, etc.)", input_schema: { type: "object", properties: { days: { type: "number" } }, required: [] } },
+    { name: "ga4_pages", description: "Top pages vues GA4", input_schema: { type: "object", properties: { days: { type: "number" }, limit: { type: "number" } }, required: [] } },
+    { name: "ga4_full", description: "Rapport complet GA4 (KPIs + daily + sources + pages)", input_schema: { type: "object", properties: { days: { type: "number" } }, required: [] } },
+    // NOUVEAUX OUTILS SEARCH CONSOLE
+    { name: "seo_queries", description: "Top requêtes SEO (clics, impressions, position)", input_schema: { type: "object", properties: { days: { type: "number" }, limit: { type: "number" } }, required: [] } },
+    { name: "seo_pages", description: "Top pages SEO", input_schema: { type: "object", properties: { days: { type: "number" }, limit: { type: "number" } }, required: [] } },
+    { name: "seo_devices", description: "Répartition mobile/desktop SEO", input_schema: { type: "object", properties: { days: { type: "number" } }, required: [] } },
+    { name: "seo_countries", description: "Répartition par pays SEO", input_schema: { type: "object", properties: { days: { type: "number" } }, required: [] } },
+    { name: "seo_opportunities", description: "Opportunités SEO (requêtes position 5-20 à optimiser)", input_schema: { type: "object", properties: { days: { type: "number" }, limit: { type: "number" } }, required: [] } },
+    { name: "seo_full", description: "Rapport SEO complet Search Console", input_schema: { type: "object", properties: { days: { type: "number" } }, required: [] } }
 ];
 
 // ============================================================
@@ -159,6 +191,52 @@ async function executeTool(name, input) {
                 const d = await r.json();
                 return { results: d.RelatedTopics?.slice(0, 5).map(t => ({ text: t.Text, url: t.FirstURL })) || [] };
             }
+            // GA4 TOOLS
+            case 'ga4_kpis': {
+                if (!ga4) return { error: 'GA4 non configuré' };
+                return await ga4.getKPIs(input.days || 7);
+            }
+            case 'ga4_daily': {
+                if (!ga4) return { error: 'GA4 non configuré' };
+                return await ga4.getDailyData(input.days || 7);
+            }
+            case 'ga4_sources': {
+                if (!ga4) return { error: 'GA4 non configuré' };
+                return await ga4.getTrafficSources(input.days || 7);
+            }
+            case 'ga4_pages': {
+                if (!ga4) return { error: 'GA4 non configuré' };
+                return await ga4.getTopPages(input.days || 7, input.limit || 10);
+            }
+            case 'ga4_full': {
+                if (!ga4) return { error: 'GA4 non configuré' };
+                return await ga4.getFullReport(input.days || 7);
+            }
+            // SEARCH CONSOLE TOOLS
+            case 'seo_queries': {
+                if (!searchConsole) return { error: 'Search Console non configuré' };
+                return await searchConsole.getTopQueries(input.days || 7, input.limit || 20);
+            }
+            case 'seo_pages': {
+                if (!searchConsole) return { error: 'Search Console non configuré' };
+                return await searchConsole.getTopPages(input.days || 7, input.limit || 20);
+            }
+            case 'seo_devices': {
+                if (!searchConsole) return { error: 'Search Console non configuré' };
+                return await searchConsole.getDeviceData(input.days || 7);
+            }
+            case 'seo_countries': {
+                if (!searchConsole) return { error: 'Search Console non configuré' };
+                return await searchConsole.getCountryData(input.days || 7);
+            }
+            case 'seo_opportunities': {
+                if (!searchConsole) return { error: 'Search Console non configuré' };
+                return await searchConsole.getOpportunities(input.days || 28, input.limit || 20);
+            }
+            case 'seo_full': {
+                if (!searchConsole) return { error: 'Search Console non configuré' };
+                return await searchConsole.getFullReport(input.days || 7);
+            }
             default: return { error: `Outil inconnu: ${name}` };
         }
     } catch (e) {
@@ -187,7 +265,7 @@ const SYSTEM_PROMPT = `Tu es STELLA, le copilote business IA de Benoit HODIESNE.
 - Panier moyen actuel : 177€ → cible 200€
 
 ## TES 4 MODULES
-1. **PERCEVOIR** : Tu collectes les données (Shopify, GA4, Ads...)
+1. **PERCEVOIR** : Tu collectes les données (Shopify, GA4, Search Console, Ads...)
 2. **PENSER** : Tu analyses, scores, recommandes
 3. **AGIR** : Tu exécutes (modifier code, créer tâches, alertes)
 4. **APPRENDRE** : Tu mémorises pour t'améliorer
@@ -199,10 +277,32 @@ const SYSTEM_PROMPT = `Tu es STELLA, le copilote business IA de Benoit HODIESNE.
 - Livraison : Mars 2026
 
 ## TES OUTILS (UTILISE-LES!)
-- **shopify_kpis** : KPIs temps réel
+### Shopify
+- **shopify_kpis** : CA, commandes, panier moyen du jour
 - **shopify_query** / **shopify_products** : Données boutique
-- **supabase_*** : Base de données
+
+### Google Analytics (GA4) ✨ NOUVEAU
+- **ga4_kpis** : Sessions, users, revenue, conversions
+- **ga4_daily** : Données par jour
+- **ga4_sources** : Sources de trafic (google, facebook, direct...)
+- **ga4_pages** : Top pages vues
+- **ga4_full** : Rapport complet
+
+### Search Console (SEO) ✨ NOUVEAU
+- **seo_queries** : Top requêtes (clics, position)
+- **seo_pages** : Top pages SEO
+- **seo_devices** : Mobile vs Desktop
+- **seo_countries** : Répartition géographique
+- **seo_opportunities** : Requêtes position 5-20 à optimiser!
+- **seo_full** : Rapport SEO complet
+
+### Base de données
+- **supabase_*** : Lire/écrire en base
+
+### GitHub & Déploiement
 - **github_*** : Lire/modifier code → déploie auto sur Railway
+
+### Mémoire & Tâches
 - **memory_*** : Ta mémoire persistante
 - **task_*** : Gestion des tâches
 
@@ -307,9 +407,16 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 
 app.get('/health', (req, res) => res.json({ 
     status: 'healthy', 
-    version: '3.0.0-copilote',
+    version: '3.1.0-copilote',
     name: 'STELLA',
-    capabilities: TOOLS.map(t => t.name)
+    capabilities: TOOLS.map(t => t.name),
+    connections: {
+        shopify: !!SHOPIFY_TOKEN,
+        supabase: !!process.env.SUPABASE_URL,
+        github: !!GITHUB_TOKEN,
+        ga4: ga4?.connected || false,
+        searchConsole: searchConsole?.connected || false
+    }
 }));
 
 app.get('/kpis', async (req, res) => {
@@ -317,6 +424,65 @@ app.get('/kpis', async (req, res) => {
     res.json(kpis);
 });
 
+// ============================================================
+// ANALYTICS ENDPOINTS
+// ============================================================
+app.get('/analytics/ga4', async (req, res) => {
+    if (!ga4) return res.status(503).json({ error: 'GA4 non configuré' });
+    const days = parseInt(req.query.days) || 7;
+    const type = req.query.type || 'kpis';
+    
+    try {
+        let data;
+        switch (type) {
+            case 'full': data = await ga4.getFullReport(days); break;
+            case 'daily': data = await ga4.getDailyData(days); break;
+            case 'sources': data = await ga4.getTrafficSources(days); break;
+            case 'pages': data = await ga4.getTopPages(days); break;
+            default: data = await ga4.getKPIs(days);
+        }
+        res.json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/analytics/search', async (req, res) => {
+    if (!searchConsole) return res.status(503).json({ error: 'Search Console non configuré' });
+    const days = parseInt(req.query.days) || 7;
+    const type = req.query.type || 'queries';
+    
+    try {
+        let data;
+        switch (type) {
+            case 'full': data = await searchConsole.getFullReport(days); break;
+            case 'queries': data = await searchConsole.getTopQueries(days); break;
+            case 'pages': data = await searchConsole.getTopPages(days); break;
+            case 'devices': data = await searchConsole.getDeviceData(days); break;
+            case 'countries': data = await searchConsole.getCountryData(days); break;
+            case 'opportunities': data = await searchConsole.getOpportunities(days); break;
+            default: data = await searchConsole.getTopQueries(days);
+        }
+        res.json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/analytics/full', async (req, res) => {
+    const days = parseInt(req.query.days) || 7;
+    const report = {
+        shopify: await executeTool('shopify_kpis', {}),
+        ga4: ga4 ? await ga4.getFullReport(days) : { error: 'Non configuré' },
+        searchConsole: searchConsole ? await searchConsole.getFullReport(days) : { error: 'Non configuré' },
+        generatedAt: new Date().toISOString()
+    };
+    res.json({ success: true, data: report });
+});
+
+// ============================================================
+// CHAT ENDPOINTS
+// ============================================================
 app.post('/chat', async (req, res) => {
     try {
         const { message, session_id = 'benoit-main' } = req.body;
@@ -361,12 +527,12 @@ app.get('/memory', async (req, res) => {
 // ============================================================
 cron.schedule('0 8 * * *', async () => {
     console.log('📅 Briefing matinal...');
-    await askClaude("Briefing matinal complet: KPIs, tâches prioritaires, alertes.", 'cron-briefing');
+    await askClaude("Briefing matinal complet: KPIs Shopify + GA4 + SEO, tâches prioritaires, alertes.", 'cron-briefing');
 });
 
 cron.schedule('0 20 * * *', async () => {
     console.log('📊 Récap du soir...');
-    await askClaude("Récap de la journée. Sauvegarde les points clés en mémoire.", 'cron-recap');
+    await askClaude("Récap de la journée avec GA4 et SEO. Sauvegarde les points clés en mémoire.", 'cron-recap');
 });
 
 // Check KPIs toutes les heures
@@ -380,6 +546,7 @@ cron.schedule('0 * * * *', async () => {
 // ============================================================
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-    console.log(`⭐ STELLA v3.0 Copilote sur port ${PORT}`);
+    console.log(`⭐ STELLA v3.1 Copilote sur port ${PORT}`);
     console.log(`📚 ${TOOLS.length} outils disponibles`);
+    console.log(`📊 GA4: ${ga4?.connected ? '✅' : '❌'} | Search Console: ${searchConsole?.connected ? '✅' : '❌'}`);
 });
