@@ -1,10 +1,25 @@
-// ga4-tool.js - Outil GA4 pour STELLA v3.0 (ES Module)
+// ga4-tool.js - Outil GA4 pour STELLA v3.1 (ES Module)
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
 
 class GA4Tool {
   constructor() {
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT || '{}');
+    let credentials = {};
+    
+    // Support base64 ou JSON direct
+    const rawCreds = process.env.GOOGLE_SERVICE_ACCOUNT || '';
+    if (rawCreds) {
+      try {
+        if (rawCreds.startsWith('{')) {
+          credentials = JSON.parse(rawCreds);
+        } else {
+          credentials = JSON.parse(Buffer.from(rawCreds, 'base64').toString('utf-8'));
+        }
+      } catch (e) {
+        console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT:', e.message);
+      }
+    }
+    
     this.propertyId = process.env.GA4_PROPERTY_ID || '427142120';
     
     if (credentials.client_email) {
@@ -13,7 +28,7 @@ class GA4Tool {
       console.log('✅ GA4 connecté - Property:', this.propertyId);
     } else {
       this.connected = false;
-      console.log('⚠️ GA4 non configuré (GOOGLE_SERVICE_ACCOUNT manquant)');
+      console.log('⚠️ GA4 non configuré (GOOGLE_SERVICE_ACCOUNT manquant ou invalide)');
     }
   }
 
