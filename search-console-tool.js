@@ -15,6 +15,10 @@ class SearchConsoleTool {
         } else {
           credentials = JSON.parse(Buffer.from(rawCreds, 'base64').toString('utf-8'));
         }
+        // Fix escaped newlines in private_key
+        if (credentials.private_key && typeof credentials.private_key === 'string') {
+          credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+        }
       } catch (e) {
         console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT:', e.message);
       }
