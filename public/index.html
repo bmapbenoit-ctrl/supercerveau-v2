@@ -3,133 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STELLA - IA Autonome Planetebeauty</title>
+    <title>STELLA - IA Autonome</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
     <style>
-        :root {
-            --gold: #de9f49;
-            --gold-light: #f4c87c;
-            --black: #121212;
-            --white: #ffffff;
-            --beige: #fdf8f3;
-            --gray: #6b7280;
-            --green: #10b981;
-            --red: #ef4444;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--beige); color: var(--black); min-height: 100vh; }
-        .header { background: linear-gradient(135deg, var(--black) 0%, #2d2d2d 100%); color: var(--white); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .logo { display: flex; align-items: center; gap: 0.75rem; }
-        .logo-icon { font-size: 1.75rem; }
-        .logo-text { font-size: 1.5rem; font-weight: 700; color: var(--gold); }
-        .logo-subtitle { font-size: 0.7rem; color: var(--gray); }
-        .status-badge { display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.2); padding: 0.5rem 1rem; border-radius: 2rem; font-size: 0.8rem; }
-        .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .capabilities { background: var(--black); padding: 0.5rem 1.5rem; display: flex; gap: 1rem; overflow-x: auto; font-size: 0.75rem; }
-        .cap-item { background: rgba(222, 159, 73, 0.2); color: var(--gold); padding: 0.25rem 0.75rem; border-radius: 1rem; white-space: nowrap; }
-        .container { max-width: 1000px; margin: 0 auto; padding: 1rem; }
-        .card { background: var(--white); border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 1rem; overflow: hidden; }
-        .card-header { background: var(--black); color: var(--white); padding: 0.875rem 1rem; display: flex; justify-content: space-between; align-items: center; }
-        .card-title { font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-        .kpis-row { display: flex; gap: 0.5rem; padding: 1rem; flex-wrap: wrap; }
-        .kpi-chip { background: var(--beige); padding: 0.5rem 1rem; border-radius: 0.5rem; text-align: center; flex: 1; min-width: 80px; }
-        .kpi-label { font-size: 0.65rem; color: var(--gray); text-transform: uppercase; }
-        .kpi-value { font-size: 1.25rem; font-weight: 700; }
-        .kpi-value.danger { color: var(--red); }
-        .kpi-value.success { color: var(--green); }
-        .chat-container { display: flex; flex-direction: column; height: calc(100vh - 250px); min-height: 400px; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-        .message { max-width: 90%; padding: 0.75rem 1rem; border-radius: 1rem; font-size: 0.9rem; line-height: 1.5; }
-        .message.user { background: var(--gold); color: var(--white); align-self: flex-end; border-bottom-right-radius: 0.25rem; }
-        .message.assistant { background: var(--beige); color: var(--black); align-self: flex-start; border-bottom-left-radius: 0.25rem; }
-        .message.system { background: #dbeafe; color: #1e40af; align-self: center; font-size: 0.8rem; padding: 0.5rem 1rem; }
-        .message h2, .message h3 { font-size: 1rem; margin: 0.5rem 0; color: var(--gold); }
-        .message ul { margin-left: 1.25rem; }
-        .message code { background: #e5e7eb; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.8em; }
-        .message pre { background: #1f2937; color: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.8em; margin: 0.5rem 0; }
-        .typing-indicator { display: flex; gap: 4px; padding: 0.75rem 1rem; background: var(--beige); border-radius: 1rem; align-self: flex-start; }
-        .typing-dot { width: 8px; height: 8px; background: var(--gray); border-radius: 50%; animation: typing 1.4s infinite; }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        .chat-input-area { padding: 1rem; border-top: 1px solid #eee; }
-        .quick-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
-        .quick-btn { background: var(--white); border: 1px solid var(--gold); color: var(--gold); padding: 0.375rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
-        .quick-btn:hover { background: var(--gold); color: var(--white); }
-        .chat-input-row { display: flex; gap: 0.5rem; }
-        .chat-input { flex: 1; padding: 0.875rem 1rem; border: 2px solid #e5e7eb; border-radius: 0.75rem; font-size: 1rem; outline: none; }
-        .chat-input:focus { border-color: var(--gold); }
-        .chat-send { background: var(--gold); color: var(--white); border: none; padding: 0.875rem 1.25rem; border-radius: 0.75rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
-        .chat-send:disabled { background: #ccc; cursor: not-allowed; }
-        .refresh-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 0.25rem 0.5rem; border-radius: 0.375rem; font-size: 0.7rem; cursor: pointer; }
-        @media (max-width: 640px) { .header { padding: 0.75rem 1rem; } .logo-text { font-size: 1.25rem; } .chat-container { height: calc(100vh - 220px); } }
+        :root{--gold:#de9f49;--black:#121212;--white:#fff;--beige:#fdf8f3;--gray:#6b7280;--green:#10b981;--red:#ef4444}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--beige);color:var(--black);min-height:100vh}
+        .header{background:linear-gradient(135deg,var(--black),#2d2d2d);color:var(--white);padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+        .logo{display:flex;align-items:center;gap:.75rem}
+        .logo-icon{font-size:1.75rem}
+        .logo-text{font-size:1.5rem;font-weight:700;color:var(--gold)}
+        .logo-sub{font-size:.7rem;color:var(--gray)}
+        .status{display:flex;align-items:center;gap:.5rem;background:rgba(16,185,129,.2);padding:.5rem 1rem;border-radius:2rem;font-size:.8rem}
+        .dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        .caps{background:var(--black);padding:.5rem 1rem;display:flex;gap:.5rem;overflow-x:auto;font-size:.7rem}
+        .cap{background:rgba(222,159,73,.2);color:var(--gold);padding:.2rem .6rem;border-radius:1rem;white-space:nowrap}
+        .container{max-width:900px;margin:0 auto;padding:1rem}
+        .card{background:var(--white);border-radius:1rem;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:1rem;overflow:hidden}
+        .card-head{background:var(--black);color:var(--white);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;font-size:.9rem;font-weight:600}
+        .kpis{display:flex;gap:.5rem;padding:.75rem;flex-wrap:wrap}
+        .kpi{background:var(--beige);padding:.5rem .75rem;border-radius:.5rem;text-align:center;flex:1;min-width:70px}
+        .kpi-label{font-size:.6rem;color:var(--gray);text-transform:uppercase}
+        .kpi-val{font-size:1.1rem;font-weight:700}
+        .kpi-val.bad{color:var(--red)}
+        .kpi-val.good{color:var(--green)}
+        .chat-box{display:flex;flex-direction:column;height:calc(100vh - 220px);min-height:350px}
+        .messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.6rem}
+        .msg{max-width:88%;padding:.6rem .9rem;border-radius:.9rem;font-size:.88rem;line-height:1.45}
+        .msg.user{background:var(--gold);color:var(--white);align-self:flex-end;border-bottom-right-radius:.2rem}
+        .msg.bot{background:var(--beige);align-self:flex-start;border-bottom-left-radius:.2rem}
+        .msg.sys{background:#dbeafe;color:#1e40af;align-self:center;font-size:.75rem;padding:.4rem .8rem}
+        .msg h2,.msg h3{font-size:.95rem;margin:.4rem 0;color:var(--gold)}
+        .msg ul{margin-left:1.1rem}
+        .msg code{background:#e5e7eb;padding:.1rem .3rem;border-radius:.2rem;font-size:.8em}
+        .msg pre{background:#1f2937;color:#f3f4f6;padding:.6rem;border-radius:.4rem;overflow-x:auto;font-size:.75em;margin:.4rem 0}
+        .typing{display:flex;gap:4px;padding:.6rem .9rem;background:var(--beige);border-radius:.9rem;align-self:flex-start}
+        .typing span{width:7px;height:7px;background:var(--gray);border-radius:50%;animation:bounce 1.4s infinite}
+        .typing span:nth-child(2){animation-delay:.2s}
+        .typing span:nth-child(3){animation-delay:.4s}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        .input-area{padding:.75rem;border-top:1px solid #eee}
+        .quick{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem}
+        .qbtn{background:var(--white);border:1px solid var(--gold);color:var(--gold);padding:.3rem .6rem;border-radius:2rem;font-size:.7rem;cursor:pointer;transition:.2s}
+        .qbtn:hover{background:var(--gold);color:var(--white)}
+        .input-row{display:flex;gap:.4rem}
+        .input{flex:1;padding:.75rem;border:2px solid #e5e7eb;border-radius:.6rem;font-size:1rem;outline:none}
+        .input:focus{border-color:var(--gold)}
+        .send{background:var(--gold);color:var(--white);border:none;padding:.75rem 1rem;border-radius:.6rem;font-size:1rem;font-weight:600;cursor:pointer}
+        .send:disabled{background:#ccc}
+        .upload-btn{background:var(--beige);border:1px solid var(--gold);color:var(--gold);padding:.75rem;border-radius:.6rem;cursor:pointer;font-size:1rem}
+        .refresh{background:0;border:1px solid var(--gold);color:var(--gold);padding:.2rem .4rem;border-radius:.3rem;font-size:.65rem;cursor:pointer}
+        .session-info{font-size:.65rem;color:var(--gray);padding:.25rem .75rem;text-align:right}
+        @media(max-width:640px){.header{padding:.6rem .8rem}.logo-text{font-size:1.2rem}.chat-box{height:calc(100vh - 200px)}}
     </style>
 </head>
 <body>
     <header class="header">
-        <div class="logo">
-            <span class="logo-icon">⭐</span>
-            <div>
-                <div class="logo-text">STELLA</div>
-                <div class="logo-subtitle">IA Autonome v2.0</div>
-            </div>
-        </div>
-        <div class="status-badge">
-            <span class="status-dot"></span>
-            <span>Autonome</span>
-        </div>
+        <div class="logo"><span class="logo-icon">⭐</span><div><div class="logo-text">STELLA</div><div class="logo-sub">IA Autonome v2.1</div></div></div>
+        <div class="status"><span class="dot"></span><span>En ligne</span></div>
     </header>
-    <div class="capabilities">
-        <span class="cap-item">📊 Shopify</span>
-        <span class="cap-item">🗄️ Supabase</span>
-        <span class="cap-item">💻 GitHub</span>
-        <span class="cap-item">🚀 Deploy</span>
-        <span class="cap-item">🔍 Web</span>
-        <span class="cap-item">🧠 Mémoire</span>
+    <div class="caps">
+        <span class="cap">📊 Shopify</span>
+        <span class="cap">🗄️ Supabase</span>
+        <span class="cap">💻 GitHub</span>
+        <span class="cap">🚀 Deploy</span>
+        <span class="cap">🧠 Mémoire</span>
+        <span class="cap">📎 Fichiers</span>
     </div>
     <main class="container">
         <div class="card">
-            <div class="card-header">
-                <span class="card-title">📊 KPIs</span>
-                <button class="refresh-btn" onclick="loadKPIs()">🔄</button>
-            </div>
-            <div class="kpis-row">
-                <div class="kpi-chip"><div class="kpi-label">CA Jour</div><div class="kpi-value" id="kpi-ca">--</div></div>
-                <div class="kpi-chip"><div class="kpi-label">Commandes</div><div class="kpi-value" id="kpi-cmd">--</div></div>
-                <div class="kpi-chip"><div class="kpi-label">Panier</div><div class="kpi-value" id="kpi-pan">--</div></div>
-                <div class="kpi-chip"><div class="kpi-label">Objectif</div><div class="kpi-value" id="kpi-prog">--%</div></div>
+            <div class="card-head"><span>📊 KPIs</span><button class="refresh" onclick="loadKPIs()">🔄</button></div>
+            <div class="kpis">
+                <div class="kpi"><div class="kpi-label">CA Jour</div><div class="kpi-val" id="ca">--</div></div>
+                <div class="kpi"><div class="kpi-label">Commandes</div><div class="kpi-val" id="cmd">--</div></div>
+                <div class="kpi"><div class="kpi-label">Panier</div><div class="kpi-val" id="pan">--</div></div>
+                <div class="kpi"><div class="kpi-label">Objectif</div><div class="kpi-val" id="prog">--%</div></div>
             </div>
         </div>
         <div class="card">
-            <div class="card-header"><span class="card-title">💬 Chat avec STELLA</span></div>
-            <div class="chat-container">
-                <div class="chat-messages" id="chat-messages">
-                    <div class="message system">⭐ STELLA v2.0 Autonome. Je peux coder, déployer, modifier la BDD, chercher sur le web. Demande-moi n'importe quoi.</div>
-                </div>
-                <div class="chat-input-area">
-                    <div class="quick-actions">
-                        <button class="quick-btn" onclick="ask('Briefing du jour')">📋 Briefing</button>
-                        <button class="quick-btn" onclick="ask('Liste les fichiers du projet sur GitHub')">📁 GitHub</button>
-                        <button class="quick-btn" onclick="ask('Quelles sont les tables Supabase ?')">🗄️ Supabase</button>
-                        <button class="quick-btn" onclick="ask('Crée une tâche: Optimiser les fiches produits')">✅ Tâche</button>
+            <div class="card-head"><span>💬 Chat</span><button class="refresh" onclick="newSession()">🆕 Nouveau</button></div>
+            <div class="session-info">Session: <span id="sid">-</span></div>
+            <div class="chat-box">
+                <div class="messages" id="msgs"></div>
+                <div class="input-area">
+                    <div class="quick">
+                        <button class="qbtn" onclick="ask('Briefing du jour')">📋 Briefing</button>
+                        <button class="qbtn" onclick="ask('Liste les fichiers GitHub')">📁 GitHub</button>
+                        <button class="qbtn" onclick="ask('Quelles tables dans Supabase ?')">🗄️ Tables</button>
+                        <button class="qbtn" onclick="ask('Modifie ton code pour ajouter une fonctionnalité de test')">🔧 Auto-modifier</button>
                     </div>
-                    <div class="chat-input-row">
-                        <input type="text" class="chat-input" id="chat-input" placeholder="Demande quelque chose à STELLA..." onkeypress="if(event.key==='Enter')send()">
-                        <button class="chat-send" id="chat-send" onclick="send()">→</button>
+                    <div class="input-row">
+                        <label class="upload-btn" title="Envoyer un fichier">📎<input type="file" id="file" style="display:none" onchange="uploadFile()"></label>
+                        <input type="text" class="input" id="inp" placeholder="Message..." onkeypress="if(event.key==='Enter')send()">
+                        <button class="send" id="btn" onclick="send()">→</button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
     <script>
-        const API='';let sid='s-'+Date.now();
-        function md(t){if(!t)return'';return t.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/^# (.*$)/gm,'<h1>$1</h1>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>').replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');}
-        async function loadKPIs(){try{const r=await fetch(API+'/kpis');const d=await r.json();const ca=parseFloat(d.ca_jour)||0;document.getElementById('kpi-ca').textContent=ca.toLocaleString('fr-FR')+'€';document.getElementById('kpi-ca').className='kpi-value '+(ca<1000?'danger':ca>=2000?'success':'');document.getElementById('kpi-cmd').textContent=d.nb_commandes||0;document.getElementById('kpi-pan').textContent=(d.panier_moyen||0)+'€';document.getElementById('kpi-prog').textContent=d.progression||'0%';}catch(e){}}
-        async function send(){const i=document.getElementById('chat-input');const m=i.value.trim();if(!m)return;const b=document.getElementById('chat-messages');const btn=document.getElementById('chat-send');b.innerHTML+=`<div class="message user">${esc(m)}</div>`;i.value='';btn.disabled=true;b.innerHTML+=`<div class="typing-indicator" id="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;b.scrollTop=b.scrollHeight;try{const r=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m,session_id:sid})});const d=await r.json();document.getElementById('typing')?.remove();if(d.success&&d.message){b.innerHTML+=`<div class="message assistant">${md(d.message)}</div>`;}else{b.innerHTML+=`<div class="message assistant">❌ ${d.error||'Erreur'}</div>`;}}catch(e){document.getElementById('typing')?.remove();b.innerHTML+=`<div class="message assistant">❌ Erreur connexion</div>`;}btn.disabled=false;b.scrollTop=b.scrollHeight;loadKPIs();}
-        function ask(q){document.getElementById('chat-input').value=q;send();}
+        const API='';
+        let sid=localStorage.getItem('stella_sid')||'s-'+Date.now();
+        localStorage.setItem('stella_sid',sid);
+        document.getElementById('sid').textContent=sid.substring(0,12)+'...';
+
+        function md(t){if(!t)return'';return t.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/^### (.*$)/gm,'<h3>$1</h3>').replace(/^## (.*$)/gm,'<h2>$1</h2>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^- (.*$)/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>').replace(/\n/g,'<br>');}
+
+        async function loadKPIs(){
+            try{const r=await fetch(API+'/kpis');const d=await r.json();
+            const ca=parseFloat(d.ca_jour)||0;
+            document.getElementById('ca').textContent=ca.toLocaleString('fr-FR')+'€';
+            document.getElementById('ca').className='kpi-val '+(ca<1000?'bad':ca>=2000?'good':'');
+            document.getElementById('cmd').textContent=d.nb_commandes||0;
+            document.getElementById('pan').textContent=(d.panier_moyen||0)+'€';
+            document.getElementById('prog').textContent=d.progression||'0%';}catch(e){}}
+
+        async function loadHistory(){
+            try{const r=await fetch(API+'/conversations/'+sid);const d=await r.json();
+            const box=document.getElementById('msgs');
+            box.innerHTML='<div class="msg sys">⭐ STELLA v2.1 - Conversations persistantes. Session: '+sid.substring(0,8)+'</div>';
+            if(d.messages&&d.messages.length>0){
+                for(const m of d.messages){
+                    if(m.role==='user'&&typeof m.content==='string'){
+                        box.innerHTML+=`<div class="msg user">${esc(m.content)}</div>`;
+                    }else if(m.role==='assistant'){
+                        const txt=Array.isArray(m.content)?m.content.find(b=>b.type==='text')?.text:m.content;
+                        if(txt)box.innerHTML+=`<div class="msg bot">${md(txt)}</div>`;
+                    }
+                }
+                box.scrollTop=box.scrollHeight;
+            }}catch(e){document.getElementById('msgs').innerHTML='<div class="msg sys">⭐ STELLA v2.1 Autonome. Nouvelle session.</div>';}}
+
+        async function send(){
+            const i=document.getElementById('inp');const m=i.value.trim();if(!m)return;
+            const box=document.getElementById('msgs');const btn=document.getElementById('btn');
+            box.innerHTML+=`<div class="msg user">${esc(m)}</div>`;i.value='';btn.disabled=true;
+            box.innerHTML+=`<div class="typing" id="t"><span></span><span></span><span></span></div>`;
+            box.scrollTop=box.scrollHeight;
+            try{const r=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m,session_id:sid})});
+            const d=await r.json();document.getElementById('t')?.remove();
+            box.innerHTML+=`<div class="msg bot">${d.success?md(d.message):'❌ '+d.error}</div>`;}
+            catch(e){document.getElementById('t')?.remove();box.innerHTML+=`<div class="msg bot">❌ Erreur connexion</div>`;}
+            btn.disabled=false;box.scrollTop=box.scrollHeight;loadKPIs();}
+
+        async function uploadFile(){
+            const f=document.getElementById('file').files[0];if(!f)return;
+            const box=document.getElementById('msgs');const btn=document.getElementById('btn');
+            box.innerHTML+=`<div class="msg user">📎 ${f.name}</div>`;btn.disabled=true;
+            box.innerHTML+=`<div class="typing" id="t"><span></span><span></span><span></span></div>`;
+            box.scrollTop=box.scrollHeight;
+            const reader=new FileReader();
+            reader.onload=async function(e){
+                const content=e.target.result;
+                try{const r=await fetch(API+'/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:f.name,content:content,session_id:sid})});
+                const d=await r.json();document.getElementById('t')?.remove();
+                box.innerHTML+=`<div class="msg bot">${d.success?md(d.message):'❌ '+d.error}</div>`;}
+                catch(e){document.getElementById('t')?.remove();box.innerHTML+=`<div class="msg bot">❌ Erreur upload</div>`;}
+                btn.disabled=false;box.scrollTop=box.scrollHeight;};
+            reader.readAsText(f);}
+
+        function ask(q){document.getElementById('inp').value=q;send();}
         function esc(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
-        loadKPIs();setInterval(loadKPIs,5*60*1000);
+        function newSession(){sid='s-'+Date.now();localStorage.setItem('stella_sid',sid);document.getElementById('sid').textContent=sid.substring(0,12)+'...';document.getElementById('msgs').innerHTML='<div class="msg sys">⭐ Nouvelle session créée</div>';}
+
+        loadKPIs();loadHistory();setInterval(loadKPIs,5*60*1000);
     </script>
 </body>
 </html>
